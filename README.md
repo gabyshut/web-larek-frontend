@@ -50,7 +50,7 @@ export interface ICardItem {
     image: string;
     title: string;
     category: string;
-    price: number;
+    price: number | null;
 }
 
 export type TProductId = Pick<ICardItem, 'id'>
@@ -61,7 +61,7 @@ export interface IBasket {
     getProducts(): ICardItem[];
     deleteItem(itemId: TProductId): void;
     addItem(itemId: TProductId): void;
-    clearList(items: ICardItem[]): void;
+    clearList(): void;
 }
 
 export interface ICardData {
@@ -183,6 +183,7 @@ export type AppEvents =
 
 - `open(content: HTMLElement)`: открывает модальное окно с заданным содержимым.
 - `close()`: закрывает текущее открытое модальное окно.
+- `disableButton(button: HTMLElement)`: при необходимости деактивирует кнопку, если она есть в элементах внутри модального окна.
 
 3. CardView
 
@@ -196,21 +197,27 @@ export type AppEvents =
 - `setClickHandler(handler: (id: TProductId) => void): void` - обработчик клика на карточку.
 - `setAddToBasketHandler(handler: (id: TProductId) => void): void` - клик на кнопку "в корзину".
 
-4. ModalForm
+4. FormPaymentAdress
 
-Отвечает за отображение модалки с формой (2 шага), наследует `Modal`.
+Отвечает за отображение формы выбора способа оплаты и ввода адреса доставки.
 
-Конструктор вызывает конструктор `Modal` и принимает шаблон формы.
+Конструктор принимает шаблон формы выбора способа оплаты и ввода адреса доставки.
 
 Методы:
 
-- `setStep(step: 1 | 2): void` - переключение между шагами формы.
-- `setSubmitHandler(handler: (formData: IOrderFormData) => void): void` - обработчик отправки формы.
 - `setFieldError(field: string, message: string): void` - показать ошибку поля.
+
+5. FormEmailPhone
+
+Отвечает за отображение формы ввода email и телефона.
+
+Конструктор принимает шаблон формы ввода email и телефона.
+
+- `setSubmitHandler(handler: (formData: IOrderFormData) => void): void` - обработчик отправки формы.
 
 5. ModalCardView
 
-Отвечает за отображение карточки в модальном окне, наследует `Modal`.
+Отвечает за отображение карточки в модальном окне.
 
 Конструктор принимает шаблон карточки и данные о товаре.
 
@@ -220,11 +227,11 @@ export type AppEvents =
 
 6. ModalSuccess
 
-Отвечает за отображение модального окна успешного оформления заказа, наследует `Modal`. Конструктор не принимает параметров.
+Отвечает за отображение модального окна успешного оформления заказа. Конструктор не принимает параметров.
 
 7. ModalBasket
 
-Отвечает за отображение модального окна корзины, наследует `Modal`.
+Отвечает за отображение модального окна корзины.
 
 Конструктор принимает шаблон корзины.
 
@@ -233,7 +240,6 @@ export type AppEvents =
 -`setItems(items: HTMLElement[]): void` - отрисовать товары в корзине.
 -`setTotal(total: number): void` - отобразить общую сумму заказа.
 -`setOrderHandler(handler: () => void): void` - обработчик кнопки "Оформить заказ".
--`setRemoveHandler(handler: (id: string) => void): void` - обработчик удаления из корзины.
 
 ### Взаимодействие между компонентами:
 
