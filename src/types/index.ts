@@ -1,5 +1,5 @@
 export interface ICardItem {
-    id: string;
+    id: number;
     description: string;
     image: string;
     title: string;
@@ -7,7 +7,7 @@ export interface ICardItem {
     price: number;
 }
 
-export type TProductId = Pick<ICardItem, 'id'>
+export type TProductId = ICardItem['id']
 
 export interface IBasket {
     items: ICardItem[];
@@ -28,7 +28,7 @@ export interface IUserOrderData {
     address: string;
     email: string;
     phone: string;
-    products: ICardItem[];
+    items: number[];
     total: number;
 }
 
