@@ -18,74 +18,76 @@ export interface IEvents {
  * В расширенных вариантах есть возможность подписаться на все события
  * или слушать события по шаблону например
  */
-export class EventEmitter implements IEvents {
-    _events: Map<EventName, Set<Subscriber>>;
 
-    constructor() {
-        this._events = new Map<EventName, Set<Subscriber>>();
-    }
+export class EventEmitter<Events extends Record<string, any> = Record<string, any>> {
+	private _events = new Map<EventName, Set<Subscriber>>();
 
-    /**
-     * Установить обработчик на событие
-     */
-    on<T extends object>(eventName: EventName, callback: (event: T) => void) {
-        if (!this._events.has(eventName)) {
-            this._events.set(eventName, new Set<Subscriber>());
-        }
-        this._events.get(eventName)?.add(callback);
-    }
+	/**
+	 * Установить обработчик на событие
+	 */
+	on<K extends keyof Events>(eventName: K, callback: (event: Events[K]) => void) {
+		if (!this._events.has(eventName as string)) {
+			this._events.set(eventName as string, new Set());
+		}
+		this._events.get(eventName as string)!.add(callback as Subscriber);
+	}
 
-    /**
-     * Снять обработчик с события
-     */
-    off(eventName: EventName, callback: Subscriber) {
-        if (this._events.has(eventName)) {
-            this._events.get(eventName)!.delete(callback);
-            if (this._events.get(eventName)?.size === 0) {
-                this._events.delete(eventName);
-            }
-        }
-    }
+	/**
+	 * Снять обработчик с события
+	 */
+	off<K extends keyof Events>(eventName: K, callback: (event: Events[K]) => void) {
+		const subs = this._events.get(eventName as string);
+		if (subs) {
+			subs.delete(callback as Subscriber);
+			if (subs.size === 0) {
+				this._events.delete(eventName as string);
+			}
+		}
+	}
 
-    /**
-     * Инициировать событие с данными
-     */
-    emit<T extends object>(eventName: string, data?: T) {
-        this._events.forEach((subscribers, name) => {
-            if (name === '*') subscribers.forEach(callback => callback({
-                eventName,
-                data
-            }));
-            if (name instanceof RegExp && name.test(eventName) || name === eventName) {
-                subscribers.forEach(callback => callback(data));
-            }
-        });
-    }
+	/**
+	 * Инициировать событие с данными
+	 */
+	emit<K extends keyof Events>(eventName: K, data?: Events[K]) {
+		for (const [name, subscribers] of this._events.entries()) {
+			const match =
+				name === '*' ||
+				(typeof name === 'string' && name === eventName) ||
+				(name instanceof RegExp && name.test(eventName as string));
 
-    /**
-     * Слушать все события
-     */
-    onAll(callback: (event: EmitterEvent) => void) {
-        this.on("*", callback);
-    }
+			if (match) {
+				subscribers.forEach((callback) => {
+					callback(name === '*' ? { eventName, data } : data);
+				});
+			}
+		}
+	}
 
-    /**
-     * Сбросить все обработчики
-     */
-    offAll() {
-        this._events = new Map<string, Set<Subscriber>>();
-    }
+	/**
+	 * Слушать все события
+	 */
+	onAll(callback: (event: EmitterEvent) => void) {
+		this.on('*' as keyof Events, callback as unknown as (e: Events[keyof Events]) => void);
+	}
 
-    /**
-     * Сделать коллбек триггер, генерирующий событие при вызове
-     */
-    trigger<T extends object>(eventName: string, context?: Partial<T>) {
-        return (event: object = {}) => {
-            this.emit(eventName, {
-                ...(event || {}),
-                ...(context || {})
-            });
-        };
-    }
+	/**
+	 * Сбросить все обработчики
+	 */
+	offAll() {
+		this._events.clear();
+	}
+
+	/**
+	 * Создать функцию-триггер
+	 */
+	trigger<K extends keyof Events>(eventName: K, context?: Partial<Events[K]>) {
+		return (event: Partial<Events[K]> = {}) => {
+			this.emit(eventName, {
+				...event,
+				...(context || {})
+			} as Events[K]);
+		};
+	}
 }
+
 

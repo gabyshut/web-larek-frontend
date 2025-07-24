@@ -1,93 +1,206 @@
 import './scss/styles.scss';
-import { ICardItem, IUserOrderData } from './types';
-import { ApiClient, Basket, CardModel, UserOrderModel } from './components/Model';
+import { ICardItem, IUserOrderData, TPaymentMethod } from './types';
+import {
+	ApiClient,
+	Basket,
+	CardModel,
+	UserOrderModel,
+} from './components/Model';
 import { API_URL, CDN_URL } from './utils/constants';
-import { CardView, Page } from './components/view';
+import {
+	CardView,
+	FormPaymentAddress,
+	FormEmailPhone,
+	Modal,
+	ModalBasket,
+	Page,
+	ModalSuccess,
+} from './components/view';
 
-// const card1: ICardItem = {
-//     id: 1234,
-//     description: "Pohui pohui pohui",
-//     image: "pohui pohui poebat",
-//     title: "poebat vashe pohui",
-//     category: "bebra",
-//     price: 5
-// }
-
-// const card2: ICardItem = {
-//     id: 2222,
-//     description: "jfdknklrngks",
-//     image: "aaaaaaaaaaa",
-//     title: "popopopopopop",
-//     category: "hui",
-//     price: 10
-// }
-
-// const card3: ICardItem = {
-//     id: 5050,
-//     description: "иуикф",
-//     image: "оооооооооооо",
-//     title: "щшщшщшщшщшщ",
-//     category: "письпопа",
-//     price: 15
-// }
-
-// const order: IUserOrderData = {
-//     payment: 'cash',
-//     address: '34ufjsf jdfoggiod , iofd, jgkei',
-//     email: 'fjkhsdjkf@mafhdsk.com',
-//     phone: '+78483948549',
-//     products: [card1, card2],
-//     total: 4564377
-// }
-
-
-// Инициализация клиента API
 const apiClient = new ApiClient(API_URL);
 
-// Главная функция — всё делаем тут
 (async () => {
-  try {
-    // 1. Получаем карточки с сервера
-    const products = await apiClient.getProducts();
-    console.log('🟢 Получены продукты с сервера:', products);
+	const products = await apiClient.getProducts();
+	const cardModel = new CardModel(products);
+	const basket = new Basket(cardModel);
+	const userOrder = new UserOrderModel();
 
-    // 2. Сохраняем карточки в модель
-    const cardModel = new CardModel(products);
+	const modalElement = document.querySelector('.modal')! as HTMLElement;
+	const modalContent = modalElement.querySelector('.modal__content')!;
+	const modal = new Modal(modalElement);
+	const modalClose = document.querySelector('.modal__close');
 
-    // 3. Создаём корзину на основе модели карточек
-    const basket = new Basket(cardModel);
+	// Каталог
+	const page = new Page(
+		document.querySelector('.gallery')!,
+		document.querySelector('.header__basket-counter')!,
+		document.querySelector('.header__basket')!
+	);
 
-    // 4. Добавляем в корзину первые три карточки (если есть)
-    products.slice(0, 3).forEach((product) => {
-      basket.addItem(product.id);
-    });
+	const cards = products.map((product) => {
+		const cardView = new CardView(
+			document.querySelector('#card-catalog'),
+			product
+		);
+		const elem = cardView.renderCard();
+		cardView.on('card:click', (data) => {
+			const cardModal = new CardView(
+				document.querySelector('#card-preview'),
+				data
+			);
+			const renderedCardModal = cardModal.renderCard();
+			const button = renderedCardModal.querySelector(
+				'.card__button'
+			) as HTMLButtonElement;
 
-    console.log('🧺 Содержимое корзины:', basket.items);
-    console.log('💰 Сумма заказа:', basket.total);
+			if (data.price === null) {
+				modal.disableButton(button);
+				button.textContent = 'Недоступно';
+			} else if (basket.items.some((item) => item.id === data.id)) {
+				modal.disableButton(button);
+				button.textContent = 'Уже в корзине';
+			}
 
-   // 5. Создаём модель заказа
-    const userOrder = new UserOrderModel();
+			modalContent.appendChild(renderedCardModal);
+			modal.open();
 
-    // Устанавливаем поля заказа
-    userOrder.setField('address', 'Пример улица, 123');
-    userOrder.setField('email', 'example@email.com');
-    userOrder.setField('phone', '+79991234567');
-    userOrder.setField('payment', 'card');
+			cardModal.on('product:add', (data) => {
+				basket.addItem(data.id);
+				page.setBasketCounter(basket.items.length);
+				button.disabled = true;
+				button.textContent = 'Уже в корзине';
+			});
+		});
 
-    // ✅ Передаём сразу карточки
-    userOrder.setItems(basket.getProducts());
-    userOrder.setTotal(basket.total);
-    
-    //тестим карточки вью
-    const page = new Page(document.querySelector('.gallery'), document.querySelector('.header__basket-counter'), document.querySelector('.header__basket'));
-    products.forEach((product) => {
-        const cardViewha = new CardView(document.querySelector('#card-catalog') as HTMLTemplateElement, products[0]);
-        const renderedCard:HTMLElement[] = renderedCard.push(cardViewha.renderCard());
-    })
-    
-    page.setCatalog(renderedCard);
+		return elem;
+	});
 
-  } catch (error) {
-    console.error('❌ Ошибка при оформлении заказа:', error);
-  }
+	page.setCatalog(cards);
+	page.setBasketCounter(basket.items.length);
+
+	modalClose.addEventListener('click', () => {
+		modal.close();
+		while (modalContent.firstChild) {
+			modalContent.removeChild(modalContent.firstChild);
+		}
+	});
+
+	//Корзина
+	page.basketButton.addEventListener('click', () => {
+		const basketModal = new ModalBasket(document.querySelector('#basket')!);
+
+		basketModal.on('submit:click', () => {
+			console.log('Заказ отправлен!');
+			const order = new UserOrderModel();
+			const formPayment = new FormPaymentAddress(
+				document.querySelector('#order')
+			);
+			while (modalContent.firstChild) {
+				modalContent.removeChild(modalContent.firstChild);
+			}
+			modalContent.appendChild(formPayment.getElement());
+			formPayment.on('address:input', (value: string) => {
+				order.setField('address', value);
+				const isValid = order.validate('address');
+
+				if (isValid) {
+					formPayment.clearFieldError('address');
+				}
+
+				formPayment.setSubmitDisabled(!(isValid && order.getField('payment')));
+			});
+
+			formPayment.on('payment:selected', (value: string) => {
+				order.setField('payment', value as TPaymentMethod);
+				const isAddressValid = order.validate('address');
+				const isPaymentValid = order.validate('payment');
+				formPayment.setSubmitDisabled(!(isAddressValid && isPaymentValid));
+			});
+
+			order.on('order:error', ({ field, message }) => {
+				formPayment.setFieldError(field, message);
+			});
+
+			formPayment.on('form:submit', () => {
+				while (modalContent.firstChild) {
+					modalContent.removeChild(modalContent.firstChild);
+				}
+				const formContacts = new FormEmailPhone(
+					document.querySelector('#contacts')
+				);
+				modalContent.appendChild(formContacts.getElement());
+				const updateButtonState = () => {
+					const isEmailValid = order.validate('email');
+					const isPhoneValid = order.validate('phone');
+					formContacts.setSubmitDisabled(!(isEmailValid && isPhoneValid));
+				};
+
+				formContacts.on('email:input', (value: string) => {
+					order.setField('email', value);
+					updateButtonState();
+				});
+
+				formContacts.on('phone:input', (value: string) => {
+					order.setField('phone', value);
+					updateButtonState();
+				});
+
+				formContacts.on('form:submit', () => {
+					order.setItems(basket.items);
+					order.setTotal(basket.total);
+
+					const handleReady = async (data: IUserOrderData) => {
+						order.off('order:ready', handleReady);
+						try {
+							await apiClient.createOrder(data);
+							basket.clearList();
+              page.setBasketCounter(basket.items.length);
+							const modalSuccess = new ModalSuccess(
+								document.querySelector('#success')
+							);
+							while (modalContent.firstChild) {
+								modalContent.removeChild(modalContent.firstChild);
+							}
+              
+							modalContent.appendChild(modalSuccess.renderSuccessModal(basket.total));
+              modalSuccess.on('modal:close', () => {
+                modal.close();
+              })
+						} catch (e) {
+							console.error('Ошибка отправки заказа:', e);
+						}
+					};
+
+					order.on('order:ready', handleReady);
+					order.prepareOrder();
+				});
+			});
+		});
+
+		const renderBasket = () => {
+			const basketCards = basket.items.map((item) => {
+				const cardBasket = new CardView(
+					document.querySelector('#card-basket')!,
+					item
+				);
+
+				cardBasket.on('product:remove', (data) => {
+					basket.deleteItem(data.id);
+					page.setBasketCounter(basket.items.length);
+
+					renderBasket();
+				});
+
+				return cardBasket.renderCard();
+			});
+
+			basketModal.setItems(basketCards);
+			basketModal.setTotal(basket.total);
+			modalContent.replaceChildren(basketModal.getBasketElement());
+		};
+
+		renderBasket();
+		basketModal.setOrderHandler();
+		modal.open();
+	});
 })();
