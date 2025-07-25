@@ -45,11 +45,24 @@ export interface IApiClient {
   getProducts(): Promise<ICardItem[]>;
   createOrder(order: IUserOrderData): Promise<void>;
 }
+
+export interface IProductListResponse {
+	items: ICardItem[];
+	total: number;
+}
   
-export type AppEvents = 
-    | { type: 'product:add'; payload: ICardItem }
-    | { type: 'product:remove'; payload: string }
-    | { type: 'basket:open' }
-    | { type: 'modal:open'; payload: HTMLElement }
-    | { type: 'modal:close' };
-  
+export type AllEvents = {
+  'product:add': ICardItem;
+  'product:remove': ICardItem;
+  'card:click': ICardItem;
+  'submit:click': void;
+  'modal:close': void;
+  'address:input': string;
+  'payment:selected': string;
+  'order:error': { field: string; message?: string };
+  'order:ready': IUserOrderData;
+  'form:submit': void;
+  'email:input': string;
+  'phone:input': string;
+  'basket:click': void;
+};

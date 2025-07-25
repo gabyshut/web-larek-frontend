@@ -1,4 +1,7 @@
 // Хорошая практика даже простые типы выносить в алиасы
+
+import { AllEvents } from "../../types";
+
 // Зато когда захотите поменять это достаточно сделать в одном месте
 type EventName = string | RegExp;
 type Subscriber = Function;
@@ -90,4 +93,4 @@ export class EventEmitter<Events extends Record<string, any> = Record<string, an
 	}
 }
 
-
+export const eventBus = new EventEmitter<AllEvents>();
