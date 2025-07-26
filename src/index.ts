@@ -39,12 +39,12 @@ const apiClient = new ApiClient(API_URL);
 
 	const modalElement = document.querySelector('.modal')! as HTMLElement;
 	const modal = new Modal(modalElement);
-	
+
 	function resetOrderFlow() {
-	userOrder.clear();
-	formContacts.clearFields();
-	formPayment.clearFields();
-}
+		userOrder.clear();
+		formContacts.clearFields();
+		formPayment.clearFields();
+	}
 
 	// Каталог
 	const page = new Page(
@@ -59,20 +59,16 @@ const apiClient = new ApiClient(API_URL);
 			eventBus
 		);
 		const renderedCardModal = cardModal.renderCard(data);
-		const button = cardModal.getButton();
 
-		if (data.price === null) {
-			modal.disableButton(button);
-			button.textContent = 'Недоступно';
-		} else if (basket.items.some((item) => item.id === data.id)) {
-			modal.disableButton(button);
-			button.textContent = 'Уже в корзине';
+        if (data.price === null){
+            	cardModal.setButtonStateUnavailable();
+        } else if (basket.items.some((item) => item.id === data.id)) {
+			cardModal.setButtonStateAlreadyInBasket();
 		} else {
-			button.onclick = () => {
+			cardModal.setButtonStateAvailable(() => {
 				eventBus.emit('product:add', data);
-				button.disabled = true;
-				button.textContent = 'Уже в корзине';
-			};
+				cardModal.setButtonStateAlreadyInBasket();
+			});
 		}
 
 		modal.setContent(renderedCardModal);
