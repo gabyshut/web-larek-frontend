@@ -3,7 +3,7 @@ import { IBasket, ICardData, ICardItem, TProductId } from "../../types";
 export class Basket implements IBasket {
     protected _items: ICardItem[];
     protected _cardData: ICardData;
-    protected _total: number = 0;
+    protected _total = 0;
 
     constructor(card: ICardData) {
         this._items = [];

@@ -19,6 +19,8 @@ const config = {
   devtool: "source-map",
   output: {
     path: path.resolve(__dirname, "dist"),
+    publicPath: process.env.NODE_ENV === 'production' ? '/web-larek-frontend/' : '/',
+    filename: isProduction ? 'bundle.[contenthash].js' : 'bundle.js',
   },
   devServer: {
     open: true,
@@ -28,7 +30,11 @@ const config = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: "src/pages/index.html"
+      template: "src/pages/index.html",
+      filename: "index.html",
+      templateParameters: {
+        baseUrl: process.env.NODE_ENV === 'production' ? '/web-larek-frontend/' : '/'
+      }
     }),
 
     new MiniCssExtractPlugin(),
